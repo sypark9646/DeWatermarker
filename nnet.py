@@ -67,7 +67,7 @@ class BaseAutoencoder(nn.Module):
                 optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
                 
-            if isinstance(checkpoint, dict) and 'epoch' in checkpoint:    
+            if isinstance(checkpoint, dict) and 'loss' in checkpoint:    
                 loss = checkpoint['loss']
 
             #self.load_state_dict(torch.load(self.FPATH))
@@ -77,6 +77,7 @@ class BaseAutoencoder(nn.Module):
         except FileNotFoundError:
             msg = "No existing model to initialize from. Creating new one ..."
             print(msg)
+            return None, None
 
     def save(self, optimizer, loss):
         """
@@ -95,39 +96,8 @@ class BaseAutoencoder(nn.Module):
         is expected in the following shape:
             (batch_size, n_channels, height, width)
         """
+        #print(sample.shape) # torch.Size([1, 2306, 1728, 3]) -> torch.Size([1, 2306, 1728])
         return sample.permute(0, 3, 1, 2).type("torch.FloatTensor")
-
-
-class ARCH0Autoencoder(BaseAutoencoder):
-    """
-    First autoencoder architecture.
-    We'll go with a shallow 1-layer convolutional autoencoder.
-    """
-    KERNEL_SIZE = 3
-    STRIDE = 1
-    FPATH = "arch_0.pt"
-
-    def __init__(self, inpt_shape):
-        super().__init__()
-        _, _, inpt_channels = inpt_shape
-        self.encoder = nn.Sequential(
-            nn.Conv2d(
-                in_channels=inpt_channels,
-                out_channels=6,
-                kernel_size=self.KERNEL_SIZE,
-                stride=self.STRIDE
-            ),
-            nn.ReLU(inplace=True)
-        )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(
-                in_channels=6,
-                out_channels=3,
-                kernel_size=self.KERNEL_SIZE
-            ),
-            nn.ReLU(inplace=True)
-        )
-
 
 class ARCH1Autoencoder(BaseAutoencoder):
     """
@@ -140,7 +110,8 @@ class ARCH1Autoencoder(BaseAutoencoder):
 
     def __init__(self, inpt_shape):
         super().__init__()
-        _, _, inpt_channels = inpt_shape
+        inpt_channels = 1
+        
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 in_channels=inpt_channels,
@@ -184,64 +155,6 @@ class ARCH1Autoencoder(BaseAutoencoder):
             ),
             nn.ReLU(inplace=True)
         )
-
-
-class ARCH2Autoencoder(BaseAutoencoder):
-    """
-    Second autoencoder architecture. This will be a 2-layer convolutional
-    autoencoder model.
-    """
-    KERNEL_SIZE = 3
-    STRIDE = 1
-    FPATH = "arch_2.pt"
-
-    def __init__(self, inpt_shape):
-        super().__init__()
-        _, _, inpt_channels = inpt_shape
-        self.encoder = nn.Sequential(
-            nn.Conv2d(
-                in_channels=inpt_channels,
-                out_channels=64,
-                kernel_size=self.KERNEL_SIZE,
-                stride=self.STRIDE
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(
-                in_channels=64,
-                out_channels=128,
-                kernel_size=self.KERNEL_SIZE,
-                stride=self.STRIDE
-            ),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(
-                in_channels=128,
-                out_channels=256,
-                kernel_size=self.KERNEL_SIZE,
-                stride=self.STRIDE
-            ),
-            nn.ReLU(inplace=True)
-        )
-        self.decoder = nn.Sequential(
-            nn.ConvTranspose2d(
-                in_channels=256,
-                out_channels=128,
-                kernel_size=self.KERNEL_SIZE
-            ),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(
-                in_channels=128,
-                out_channels=64,
-                kernel_size=self.KERNEL_SIZE
-            ),
-            nn.ReLU(inplace=True),
-            nn.ConvTranspose2d(
-                in_channels=64,
-                out_channels=inpt_channels,
-                kernel_size=self.KERNEL_SIZE
-            ),
-            nn.ReLU(inplace=True)
-        )
-
 
 
 if __name__ == '__main__':
@@ -307,7 +220,7 @@ if __name__ == '__main__':
         # TODO: Move this into `debug()` method.
         if epoch == 0 or epoch % 100 == 0:
             print(">> epoch # {}: {}".format(epoch, loss.data))
-            display(output)
+            
             if loss < min_loss:
                 print(">> updating weights.")
                 model.save(optimizer=optimizer, loss=loss)
