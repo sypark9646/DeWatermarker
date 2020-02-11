@@ -7,6 +7,7 @@ from utils import display
 import cv2
 import numpy as np
 
+
 class BaseAutoencoder(nn.Module):
     """
     Provides some common functionality across the different autoencoder
@@ -29,7 +30,11 @@ class BaseAutoencoder(nn.Module):
         """
         Load in any existing weights belonging to this model.
         """
-        optimizer = None
+        optimizer = torch.optim.Adam(
+            model.parameters(),
+            lr=ETA,
+            weight_decay=1e-5
+        )
         loss = None
         try:
             checkpoint = torch.load(self.FPATH)
@@ -38,7 +43,13 @@ class BaseAutoencoder(nn.Module):
             else:
                 self.load_state_dict(checkpoint)
                 
-          
+            if isinstance(checkpoint, dict) and 'optimizer_state_dict' in checkpoint:
+                optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
+
+                
+            if isinstance(checkpoint, dict) and 'loss' in checkpoint:    
+                loss = checkpoint['loss']
+
             #self.load_state_dict(torch.load(self.FPATH))
             self.eval()
             return optimizer, loss
@@ -46,6 +57,7 @@ class BaseAutoencoder(nn.Module):
         except FileNotFoundError:
             msg = "No existing model to initialize from. Creating new one ..."
             print(msg)
+            return None, None
 
     def save(self, optimizer, loss):
         """
@@ -64,7 +76,9 @@ class BaseAutoencoder(nn.Module):
         is expected in the following shape:
             (batch_size, n_channels, height, width)
         """
+        #print(sample.shape) # torch.Size([1, 2306, 1728, 3]) -> torch.Size([1, 2306, 1728])
         return sample.permute(0, 3, 1, 2).type("torch.FloatTensor")
+
 class ARCH1Autoencoder(BaseAutoencoder):
     """
     Second autoencoder architecture. This will be a 2-layer convolutional
@@ -76,7 +90,8 @@ class ARCH1Autoencoder(BaseAutoencoder):
 
     def __init__(self, inpt_shape):
         super().__init__()
-        _, _, inpt_channels = inpt_shape
+        inpt_channels = 1
+        
         self.encoder = nn.Sequential(
             nn.Conv2d(
                 in_channels=inpt_channels,
@@ -100,7 +115,7 @@ class ARCH1Autoencoder(BaseAutoencoder):
             ),
             nn.ReLU(inplace=True)
         )
-        self.decoder = nn.Sequaential(
+        self.decoder = nn.Sequential(
             nn.ConvTranspose2d(
                 in_channels=24,
                 out_channels=12,
@@ -150,32 +165,8 @@ if __name__ == '__main__':
     for i_batch, sample_batched in enumerate(dataloader):
         watermarked = sample_batched["watermarked"]
         output = model(x=watermarked).detach().numpy()
-        output_pic = output.reshape(2306, 1728, 3).astype(int) #tiff float형으로 저장이 안돼서, uint8로 하면 노이즈 안없어짐
+        output_pic = output.reshape(2306, 1728, 1).astype(int) #tiff float형으로 저장이 안돼서, uint8로 하면 노이즈 안없어짐
         
         cv2.imwrite('C:/Users/soyeon/Desktop/DeWatermarker-master/output.tiff', output_pic)
-        
-        cpoint1 = int(1728/3)
-        cpoint2 = int(1728*2/3)
-        rpoint1 = int(2306/3)
-        rpoint2 = int(2306*2/3)
-        
-        img = list()
-        
-        img.append(output_pic[:rpoint1, :cpoint1, :])
-        img.append(output_pic[:rpoint1, cpoint1:cpoint2, :])
-        img.append(output_pic[:rpoint1, cpoint2:, :])
-        
-        img.append(output_pic[rpoint1:rpoint2, :cpoint1, :])
-        img.append(output_pic[rpoint1:rpoint2, cpoint1:cpoint2, :])
-        img.append(output_pic[rpoint1:rpoint2, cpoint2:, :])
-        
-        img.append(output_pic[rpoint2:, :cpoint1, :])
-        img.append(output_pic[rpoint2:, cpoint1:cpoint2, :])
-        img.append(output_pic[rpoint2:, cpoint2:, :])
-        
-        for i in range(9):
-            cv2.imwrite('C:/Users/soyeon/Desktop/DeWatermarker-master/output'+str(i)+'.tiff', img[i])
-        
-        break
-        
+   
     print('Finished!')
