@@ -42,4 +42,4 @@ model.fit(x_train_noisy, x_train,
           callbacks=[ckpt, early_stopping],
           validation_data=(x_test_noisy, x_test))
 
-model.save('./model/dewatermark.h5')
+model.save('./model/dewatermark.h5', save_format = 'h5')
