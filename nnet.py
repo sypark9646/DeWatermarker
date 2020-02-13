@@ -161,11 +161,10 @@ if __name__ == '__main__':
     torch.multiprocessing.freeze_support()
     
     # Hyperparameters.
-    BATCH_SIZE = 4
+    BATCH_SIZE = 1
     SHUFFLE = True
     NUM_WORKERS = 4
     N_EPOCHS = 2000
-    N_BATCHES = 10
     ETA = 1e-3
 
 
