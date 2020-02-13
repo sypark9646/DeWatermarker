@@ -202,8 +202,7 @@ if __name__ == '__main__':
 
     for epoch in range(N_EPOCHS):
         for i_batch, sample_batched in enumerate(dataloader):
-            watermarked = sample_batched["watermarked"]
-            original = sample_batched["original"]
+            watermarked, original = sample_batched
             original = model.resize(sample=original)
             # NOTE: This resizing operation is __inverting__ the colours.
             # It's fine given that our task is still to remove watermarks, but
